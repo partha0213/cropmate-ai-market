@@ -26,6 +26,17 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { toast } from 'sonner';
+import { Listing } from '@/types/supabase';
+
+interface ProductWithFarmer extends Listing {
+  farmer: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    address: string | null;
+    phone: string | null;
+  };
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,12 +56,12 @@ const ProductDetail = () => {
           *,
           farmer:profiles(id, full_name, avatar_url, address, phone)
         `)
-        .eq('id', id)
+        .eq('id', id as string)
         .eq('status', 'active')
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as ProductWithFarmer;
     },
   });
 

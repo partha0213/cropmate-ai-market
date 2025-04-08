@@ -1,33 +1,42 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Listing, CropCategory, QualityGrade } from '@/types/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { CropCategory, QualityGrade, Listing } from '@/types/supabase';
 
 export interface ListingFilters {
-  category?: CropCategory | null;
-  quality?: QualityGrade | null;
-  minPrice?: number | null;
-  maxPrice?: number | null;
-  searchTerm?: string | null;
-  farmerId?: string | null;
-  nearby?: boolean;
-  userLat?: number;
-  userLng?: number;
-  maxDistance?: number; // in km
+  category: CropCategory | null;
+  quality: QualityGrade | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  searchTerm: string | null;
+  farmerId?: string;
+  nearby?: {
+    lat: number;
+    lng: number;
+    radius?: number; // in km
+  };
 }
 
-export function useListings(filters: ListingFilters = {}) {
+export const useListings = (filters: ListingFilters = {
+  category: null,
+  quality: null,
+  minPrice: null,
+  maxPrice: null,
+  searchTerm: null
+}) => {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: ['listings', filters],
-    queryFn: async () => {
+    queryFn: async (): Promise<Listing[]> => {
       let query = supabase
         .from('listings')
-        .select(`
-          *,
-          farmer:profiles(id, full_name, avatar_url, address)
-        `)
-        .eq('status', 'active');
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
 
+      // Apply filters
       if (filters.category) {
         query = query.eq('category', filters.category);
       }
@@ -36,11 +45,11 @@ export function useListings(filters: ListingFilters = {}) {
         query = query.eq('quality_grade', filters.quality);
       }
 
-      if (filters.minPrice !== undefined && filters.minPrice !== null) {
+      if (filters.minPrice !== null && filters.minPrice !== undefined) {
         query = query.gte('price', filters.minPrice);
       }
 
-      if (filters.maxPrice !== undefined && filters.maxPrice !== null) {
+      if (filters.maxPrice !== null && filters.maxPrice !== undefined) {
         query = query.lte('price', filters.maxPrice);
       }
 
@@ -52,51 +61,30 @@ export function useListings(filters: ListingFilters = {}) {
         query = query.eq('farmer_id', filters.farmerId);
       }
 
-      // For nearby filtering, we'd ideally use PostGIS in Supabase
-      // As a fallback, we'll fetch all and filter by distance in the client side
+      // Location-based filtering
+      if (filters.nearby && filters.nearby.lat && filters.nearby.lng) {
+        // This is a simplified version - for production, you may want to use PostGIS or a more sophisticated approach
+        const radius = filters.nearby.radius || 10; // default 10km
+        
+        // Simple bounding box filter (not perfect but works for small distances)
+        const latDiff = radius / 111.32; // 1 degree of latitude is approximately 111.32 km
+        const lngDiff = radius / (111.32 * Math.cos(filters.nearby.lat * Math.PI / 180));
+        
+        query = query
+          .gte('location_lat', filters.nearby.lat - latDiff)
+          .lte('location_lat', filters.nearby.lat + latDiff)
+          .gte('location_lng', filters.nearby.lng - lngDiff)
+          .lte('location_lng', filters.nearby.lng + lngDiff);
+      }
 
       const { data, error } = await query;
 
       if (error) {
-        throw error;
+        throw new Error(`Error fetching listings: ${error.message}`);
       }
 
-      let filteredData = data;
-
-      // Client-side distance calculation if nearby flag is true
-      if (filters.nearby && filters.userLat && filters.userLng) {
-        filteredData = data.filter(listing => {
-          if (!listing.location_lat || !listing.location_lng) return false;
-          
-          const distance = calculateDistance(
-            filters.userLat!,
-            filters.userLng!,
-            listing.location_lat,
-            listing.location_lng
-          );
-          
-          return distance <= (filters.maxDistance || 50); // Default 50km if not specified
-        });
-      }
-
-      return filteredData;
+      return data || [];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
-}
-
-// Haversine formula to calculate distance between two points
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c; // Distance in km
-  return distance;
-}
-
-function deg2rad(deg: number) {
-  return deg * (Math.PI / 180);
-}
+};
