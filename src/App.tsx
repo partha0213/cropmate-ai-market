@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ProfilePage from "./pages/ProfilePage";
+import Marketplace from "./pages/Marketplace";
+import ProductDetail from "./pages/ProductDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -30,11 +32,24 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
             
             {/* Protected routes */}
             <Route path="/profile" element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Add routes for farmer */}
+            <Route path="/farmer/add-product" element={
+              <ProtectedRoute requiredRole="farmer">
+                {/* Will implement this later */}
+                <div className="container mx-auto p-8">
+                  <h1 className="text-2xl font-bold">Add New Product</h1>
+                  <p className="mt-4">This page is under construction.</p>
+                </div>
               </ProtectedRoute>
             } />
             
