@@ -1,7 +1,7 @@
 
 import React from 'react';
 import Navbar from '@/components/Navbar';
-import { Hero } from '@/components/Hero'; 
+import Hero from '@/components/Hero'; // Changed from { Hero } to default import
 import FeaturedProducts from '@/components/FeaturedProducts';
 import CategoryList from '@/components/CategoryList';
 import Footer from '@/components/Footer';
