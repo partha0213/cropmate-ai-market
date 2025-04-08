@@ -11,6 +11,10 @@ import Auth from "./pages/Auth";
 import ProfilePage from "./pages/ProfilePage";
 import Marketplace from "./pages/Marketplace";
 import ProductDetail from "./pages/ProductDetail";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
+import FarmerDashboardPage from "./pages/FarmerDashboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -34,6 +38,21 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/checkout" element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/order-success" element={
+              <ProtectedRoute>
+                <OrderSuccessPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/order-history" element={
+              <ProtectedRoute>
+                <OrderHistoryPage />
+              </ProtectedRoute>
+            } />
             
             {/* Protected routes */}
             <Route path="/profile" element={
@@ -42,7 +61,13 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Add routes for farmer */}
+            {/* Farmer routes */}
+            <Route path="/farmer/dashboard" element={
+              <ProtectedRoute requiredRole="farmer">
+                <FarmerDashboardPage />
+              </ProtectedRoute>
+            } />
+            
             <Route path="/farmer/add-product" element={
               <ProtectedRoute requiredRole="farmer">
                 {/* Will implement this later */}

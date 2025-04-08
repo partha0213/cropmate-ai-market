@@ -21,7 +21,7 @@ export function useCart() {
   const [cartUpdating, setCartUpdating] = useState(false);
   
   // Fetch cart items with listing details for the current user
-  const { data: cartItems, isLoading, error, refetch } = useQuery({
+  const { data: cartItems = [], isLoading, error, refetch } = useQuery({
     queryKey: ['cart', user?.id],
     queryFn: async (): Promise<CartItemWithListing[]> => {
       if (!user) return [];
@@ -38,7 +38,17 @@ export function useCart() {
         .eq('user_id', user.id);
       
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to ensure type safety
+      return (data || []).map(item => ({
+        ...item,
+        listing: {
+          ...item.listing as Listing,
+          // Ensure the category is properly typed
+          category: item.listing?.category as Listing['category'],
+          quality_grade: item.listing?.quality_grade as Listing['quality_grade'],
+        }
+      }));
     },
     enabled: !!user,
   });
@@ -184,12 +194,12 @@ export function useCart() {
   });
   
   // Calculate cart totals
-  const cartTotal = cartItems?.reduce((sum, item) => {
+  const cartTotal = cartItems.reduce((sum, item) => {
     const price = item.listing.price || 0;
     return sum + (price * item.quantity);
-  }, 0) || 0;
+  }, 0);
   
-  const itemsCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const itemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   
   return {
     cartItems,

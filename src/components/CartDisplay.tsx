@@ -7,7 +7,7 @@ import { X, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const CartDisplay = () => {
-  const { cart, isLoading, removeFromCart, updateCartItem, clearCart, totalPrice } = useCart();
+  const { cartItems, isLoading, removeFromCart, updateCartItem, clearCart, cartTotal } = useCart();
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -19,7 +19,7 @@ const CartDisplay = () => {
     );
   }
 
-  if (cart.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
@@ -28,7 +28,7 @@ const CartDisplay = () => {
           Add fresh, locally-grown products to your cart and support local farmers.
         </p>
         <Button 
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/marketplace')}
           className="bg-cropmate-primary hover:bg-cropmate-primary/90"
         >
           Browse Products
@@ -37,14 +37,14 @@ const CartDisplay = () => {
     );
   }
 
-  const handleUpdateQuantity = (cartItemId: string, currentQuantity: number, delta: number) => {
-    updateCartItem.mutate({ cartItemId, quantity: currentQuantity + delta });
+  const handleUpdateQuantity = (id: string, currentQuantity: number, delta: number) => {
+    updateCartItem.mutate({ id, quantity: currentQuantity + delta });
   };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-grow overflow-y-auto py-4">
-        {cart.map((item) => (
+        {cartItems.map((item) => (
           <div key={item.id} className="flex border-b border-gray-100 py-4">
             <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
               <img
@@ -57,7 +57,7 @@ const CartDisplay = () => {
             <div className="ml-4 flex flex-1 flex-col">
               <div className="flex justify-between text-base font-medium text-gray-900">
                 <h3>
-                  <Link to={`/products/${item.listing_id}`}>{item.listing.title}</Link>
+                  <Link to={`/product/${item.listing_id}`}>{item.listing.title}</Link>
                 </h3>
                 <p className="ml-4">₹{(item.listing.price * item.quantity).toFixed(2)}</p>
               </div>
@@ -107,7 +107,7 @@ const CartDisplay = () => {
         
         <div className="flex justify-between text-base font-medium text-gray-900 mb-2">
           <p>Subtotal</p>
-          <p>₹{totalPrice.toFixed(2)}</p>
+          <p>₹{cartTotal.toFixed(2)}</p>
         </div>
         
         <p className="text-sm text-gray-500 mb-6">
@@ -124,7 +124,7 @@ const CartDisplay = () => {
         <Button 
           variant="outline" 
           className="w-full"
-          onClick={() => navigate('/products')}
+          onClick={() => navigate('/marketplace')}
         >
           Continue Shopping
         </Button>

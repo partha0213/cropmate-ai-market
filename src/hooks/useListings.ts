@@ -83,7 +83,13 @@ export const useListings = (filters: ListingFilters = {
         throw new Error(`Error fetching listings: ${error.message}`);
       }
 
-      return data || [];
+      // Transform the data to ensure proper typing
+      return (data || []).map(item => ({
+        ...item,
+        // Ensure the category and quality_grade are properly typed
+        category: item.category as CropCategory,
+        quality_grade: item.quality_grade as QualityGrade,
+      }));
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
