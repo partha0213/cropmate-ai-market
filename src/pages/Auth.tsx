@@ -32,7 +32,8 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signUp(email, password, role, fullName);
+    // Updated to match the expected parameters in AuthContext
+    await signUp(email, password, { role, fullName });
   };
 
   return (

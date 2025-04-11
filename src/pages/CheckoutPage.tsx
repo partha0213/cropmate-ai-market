@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/useCart';
@@ -55,8 +54,8 @@ const CheckoutPage = () => {
 
   const [formData, setFormData] = useState<CheckoutFormData>({
     fullName: user?.full_name || '',
-    phone: user?.phone || '',
     address: user?.address || '',
+    phone: user?.phone || '',
     city: '',
     state: '',
     pincode: '',

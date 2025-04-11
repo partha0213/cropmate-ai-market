@@ -115,14 +115,14 @@ const Marketplace = () => {
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <Select
-                    value={filters.category || ''}
-                    onValueChange={(value) => updateFilter('category', value || null)}
+                    value={filters.category || "all"}
+                    onValueChange={(value) => updateFilter('category', value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
                       {categories.map((category) => (
                         <SelectItem key={category.value} value={category.value}>
                           {category.label}
@@ -135,14 +135,14 @@ const Marketplace = () => {
                 <div className="space-y-2">
                   <Label htmlFor="quality">Quality Grade</Label>
                   <Select
-                    value={filters.quality || ''}
-                    onValueChange={(value) => updateFilter('quality', value || null)}
+                    value={filters.quality || "all"}
+                    onValueChange={(value) => updateFilter('quality', value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Any Grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Any Grade</SelectItem>
+                      <SelectItem value="all">Any Grade</SelectItem>
                       {qualityGrades.map((grade) => (
                         <SelectItem key={grade.value} value={grade.value}>
                           {grade.label}

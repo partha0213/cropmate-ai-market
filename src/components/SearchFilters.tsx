@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 
 // List of states in India
 const states = [
-  "All States",
   "Andhra Pradesh",
   "Karnataka",
   "Kerala",
@@ -82,13 +81,14 @@ const SearchFilters = () => {
               {/* Location filter */}
               <div>
                 <Label className="text-sm font-medium mb-2 block">Location</Label>
-                <Select defaultValue="All States">
+                <Select defaultValue="all_states">
                   <SelectTrigger>
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all_states">All States</SelectItem>
                     {states.map((state) => (
-                      <SelectItem key={state} value={state}>
+                      <SelectItem key={state} value={state.toLowerCase().replace(/\s+/g, '_')}>
                         {state}
                       </SelectItem>
                     ))}
