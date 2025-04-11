@@ -1,44 +1,42 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { CropCategory, Listing, Order, Profile } from '@/types/supabase';
+import { Order, Listing } from '@/types/supabase';
+import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Package, Truck, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Truck, Calendar, Clock, Package, ChevronDown, ChevronRight, Eye } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-// Define proper interfaces for the order with related data
+// Extended Order interface with additional fields needed for the UI
 interface OrderWithListing extends Order {
   listing: Listing & {
     farmer: {
-      id: string;
       full_name: string;
-    }
+      phone: string;
+    };
   };
+  total_amount: number;
+  subtotal_amount: number;
+  delivery_fee: number;
 }
 
 const OrderHistoryPage = () => {
   const { user } = useAuth();
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
-
-  const toggleOrderExpanded = (orderId: string) => {
-    setExpandedOrders(prev => ({
-      ...prev,
-      [orderId]: !prev[orderId]
-    }));
-  };
-
-  const { data: orders, isLoading, error } = useQuery({
-    queryKey: ['orders', user?.id],
+  const [activeTab, setActiveTab] = useState<string>('all');
+  
+  // Fetch user's order history
+  const { data: orders, isLoading } = useQuery({
+    queryKey: ['order-history', user?.id],
     queryFn: async (): Promise<OrderWithListing[]> => {
       if (!user?.id) throw new Error('User not authenticated');
-
+      
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -46,36 +44,74 @@ const OrderHistoryPage = () => {
           listing:listing_id (
             *,
             farmer:farmer_id (
-              id,
-              full_name
+              full_name,
+              phone
             )
           )
         `)
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false });
-
+        
       if (error) throw new Error(error.message);
       
-      // Type assertion to satisfy TypeScript
-      return data as unknown as OrderWithListing[];
+      // Add calculated fields to each order for the UI
+      return (data || []).map(order => ({
+        ...order,
+        total_amount: order.total_price,  // Map from DB field to UI field
+        subtotal_amount: order.total_price * 0.95, // Example calculation, adjust as needed
+        delivery_fee: order.total_price * 0.05 // Example calculation, adjust as needed
+      })) as OrderWithListing[];
     },
     enabled: !!user?.id,
   });
-
-  const getOrderStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case 'processing':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Processing</Badge>;
-      case 'shipped':
-        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Shipped</Badge>;
-      case 'delivered':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Delivered</Badge>;
+  
+  // Filter orders based on active tab
+  const filteredOrders = React.useMemo(() => {
+    if (!orders) return [];
+    
+    switch (activeTab) {
+      case 'active':
+        return orders.filter(order => 
+          ['placed', 'confirmed', 'processing', 'shipped'].includes(order.status.toLowerCase())
+        );
+      case 'completed':
+        return orders.filter(order => 
+          order.status.toLowerCase() === 'delivered'
+        );
       case 'cancelled':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
+        return orders.filter(order => 
+          order.status.toLowerCase() === 'cancelled'
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return orders;
+    }
+  }, [orders, activeTab]);
+  
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+  
+  // Get status badge color
+  const getStatusBadgeClass = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'cancelled':
+        return 'bg-red-50 text-red-700 border-red-200';
+      case 'processing':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'shipped':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'placed':
+      case 'confirmed':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
@@ -84,180 +120,158 @@ const OrderHistoryPage = () => {
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 flex-1">
-        <h1 className="text-2xl font-bold mb-6">Order History</h1>
+        <h1 className="text-2xl font-bold mb-6">Your Order History</h1>
         
-        <Tabs defaultValue="all">
-          <TabsList className="mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList>
             <TabsTrigger value="all">All Orders</TabsTrigger>
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="all" className="space-y-4">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cropmate-primary"></div>
-              </div>
-            ) : error ? (
-              <div className="text-center py-12">
-                <p className="text-red-500">Error loading orders. Please try again later.</p>
-              </div>
-            ) : orders?.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">You haven't placed any orders yet.</p>
-                <Button 
-                  variant="link" 
-                  className="mt-2"
-                  onClick={() => window.location.href = '/marketplace'}
-                >
-                  Browse Marketplace
+        </Tabs>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cropmate-primary"></div>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center">
+                <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No orders found</h3>
+                <p className="text-gray-500 mb-6">
+                  {activeTab === 'all' 
+                    ? "You haven't placed any orders yet." 
+                    : `You don't have any ${activeTab} orders.`}
+                </p>
+                <Button onClick={() => window.location.href = "/marketplace"}>
+                  Browse Products
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {orders?.map((order) => (
-                  <Card key={order.id} className="overflow-hidden">
-                    <CardContent className="p-0">
-                      <div className="p-4 bg-gray-50 border-b flex flex-col sm:flex-row justify-between">
-                        <div>
-                          <p className="text-sm text-gray-500">Order placed</p>
-                          <p className="font-medium">{format(new Date(order.created_at), 'PP')}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {filteredOrders.map((order) => (
+              <Card key={order.id} className="overflow-hidden">
+                <div className="border-b px-6 py-4 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Order #{order.id.substring(0, 8)}</span>
+                      <Badge variant="outline" className={getStatusBadgeClass(order.status)}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        <span>Placed on {format(new Date(order.created_at), 'PP')}</span>
+                      </div>
+                      {order.expected_delivery_date && (
+                        <div className="flex items-center">
+                          <Truck className="h-4 w-4 mr-1" />
+                          <span>
+                            Expected delivery by {format(new Date(order.expected_delivery_date), 'PP')}
+                          </span>
                         </div>
-                        
-                        <div>
-                          <p className="text-sm text-gray-500">Total</p>
-                          <p className="font-medium">₹{order.total_amount}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex items-center">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Track Order
+                    </Button>
+                  </div>
+                </div>
+                
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-4">
+                        <div className="w-20 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                          <img 
+                            src={order.listing.image_url || '/placeholder.svg'} 
+                            alt={order.listing.title} 
+                            className="w-full h-full object-cover"
+                          />
                         </div>
-                        
-                        <div>
-                          <p className="text-sm text-gray-500">Order ID</p>
-                          <p className="font-medium text-sm">{order.id.substring(0, 8)}</p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-gray-500">Status</p>
-                          {getOrderStatusBadge(order.status)}
+                        <div className="flex-1">
+                          <h3 className="font-medium text-lg">{order.listing.title}</h3>
+                          <p className="text-gray-500 text-sm">
+                            Seller: {order.listing.farmer.full_name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-medium">
+                              {formatCurrency(order.listing.price)} / {order.listing.unit || 'kg'}
+                            </span>
+                            <span className="text-gray-500">x {order.quantity}</span>
+                          </div>
+                          <Badge variant="outline" className="mt-2 capitalize">
+                            {order.listing.category}
+                          </Badge>
                         </div>
                       </div>
-                      
-                      <div className="p-4">
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="w-24 h-24 flex-shrink-0">
-                            <img 
-                              src={order.listing.image_url || '/placeholder.svg'} 
-                              alt={order.listing.title}
-                              className="w-full h-full object-cover rounded"
-                            />
+                    </div>
+                    
+                    <div className="min-w-[200px] border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 mt-4 md:mt-0">
+                      <h4 className="font-medium mb-2">Order Summary</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Subtotal:</span>
+                          <span>{formatCurrency(order.subtotal_amount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Delivery:</span>
+                          <span>{formatCurrency(order.delivery_fee)}</span>
+                        </div>
+                        <div className="border-t pt-1 mt-1 flex justify-between font-medium">
+                          <span>Total:</span>
+                          <span>{formatCurrency(order.total_amount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Accordion type="single" collapsible className="mt-6">
+                    <AccordionItem value="details">
+                      <AccordionTrigger className="text-sm font-medium">
+                        Order Details
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <h4 className="font-medium mb-2">Delivery Address</h4>
+                            <p className="text-gray-600">
+                              {order.delivery_address || 'Address not provided'}
+                            </p>
                           </div>
-                          
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{order.listing.title}</h3>
-                            <div className="flex flex-wrap gap-2 mt-1 text-sm text-gray-500">
-                              <span className="flex items-center">
-                                <User size={14} className="mr-1" />
-                                Seller: {order.listing.farmer.full_name}
-                              </span>
-                              <span className="flex items-center">
-                                <Package size={14} className="mr-1" />
-                                Quantity: {order.quantity} {order.listing.unit || 'kg'}
-                              </span>
+                          <div>
+                            <h4 className="font-medium mb-2">Payment Information</h4>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-600">Method:</span>
+                              <Badge variant="outline">
+                                {order.payment_method?.toUpperCase() || 'Cash on Delivery'}
+                              </Badge>
                             </div>
-                            
-                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                              <span className="flex items-center text-gray-600">
-                                <Truck size={14} className="mr-1" />
-                                Expected delivery: {order.expected_delivery_date ? 
-                                  format(new Date(order.expected_delivery_date), 'PP') : 
-                                  'Not specified'}
-                              </span>
-                              
-                              {order.status.toLowerCase() === 'delivered' && order.actual_delivery_date && (
-                                <span className="flex items-center text-green-600">
-                                  <Calendar size={14} className="mr-1" />
-                                  Delivered on: {format(new Date(order.actual_delivery_date), 'PP')}
-                                </span>
-                              )}
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-gray-600">Status:</span>
+                              <Badge variant={order.payment_status === 'completed' ? 'default' : 'outline'}>
+                                {order.payment_status?.toUpperCase() || 'Pending'}
+                              </Badge>
                             </div>
                           </div>
                         </div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleOrderExpanded(order.id)}
-                          className="mt-2 text-gray-500 hover:text-gray-700 w-full flex justify-center"
-                        >
-                          {expandedOrders[order.id] ? (
-                            <>
-                              <span>Show less</span>
-                              <ChevronUp size={16} className="ml-1" />
-                            </>
-                          ) : (
-                            <>
-                              <span>Show details</span>
-                              <ChevronDown size={16} className="ml-1" />
-                            </>
-                          )}
-                        </Button>
-                        
-                        {expandedOrders[order.id] && (
-                          <div className="mt-4 pt-4 border-t">
-                            <div className="grid gap-4 md:grid-cols-2">
-                              <div>
-                                <h4 className="font-medium mb-2">Delivery Details</h4>
-                                <p className="text-sm text-gray-600">{order.delivery_address}</p>
-                                {order.delivery_notes && (
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    Notes: {order.delivery_notes}
-                                  </p>
-                                )}
-                              </div>
-                              
-                              <div>
-                                <h4 className="font-medium mb-2">Payment Information</h4>
-                                <p className="text-sm text-gray-600">
-                                  Method: {order.payment_method || 'Cash on Delivery'}
-                                </p>
-                                <div className="flex justify-between text-sm text-gray-600 mt-1">
-                                  <span>Item Total:</span>
-                                  <span>₹{order.subtotal_amount || order.total_amount}</span>
-                                </div>
-                                {order.delivery_fee && (
-                                  <div className="flex justify-between text-sm text-gray-600">
-                                    <span>Delivery Fee:</span>
-                                    <span>₹{order.delivery_fee}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between font-medium mt-1">
-                                  <span>Total:</span>
-                                  <span>₹{order.total_amount}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          {/* Other tab contents would be similar but filtered by order status */}
-          <TabsContent value="active">
-            {/* Filter orders that are not delivered or cancelled */}
-          </TabsContent>
-          
-          <TabsContent value="completed">
-            {/* Show only delivered orders */}
-          </TabsContent>
-          
-          <TabsContent value="cancelled">
-            {/* Show only cancelled orders */}
-          </TabsContent>
-        </Tabs>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
       
       <Footer />

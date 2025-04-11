@@ -10,7 +10,6 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { BarChart } from '@/components/ui/chart';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -23,6 +22,7 @@ interface OrderWithBuyer extends Order {
     full_name: string;
     phone: string;
   };
+  total_amount: number; // Add this to fix the TypeScript error
 }
 
 const FarmerDashboardPage = () => {
@@ -42,7 +42,12 @@ const FarmerDashboardPage = () => {
         .order('created_at', { ascending: false });
         
       if (error) throw new Error(error.message);
-      return data || [];
+      
+      // Convert string category to CropCategory type
+      return (data || []).map(item => ({
+        ...item,
+        category: item.category as CropCategory
+      }));
     },
     enabled: !!user?.id,
   });
@@ -79,8 +84,11 @@ const FarmerDashboardPage = () => {
         
       if (error) throw new Error(error.message);
       
-      // Type assertion to satisfy TypeScript
-      return data as unknown as OrderWithBuyer[];
+      // Map orders and add total_amount property
+      return (data || []).map(order => ({
+        ...order,
+        total_amount: order.total_price // Map total_price to total_amount
+      })) as OrderWithBuyer[];
     },
     enabled: !!user?.id,
   });
@@ -102,6 +110,35 @@ const FarmerDashboardPage = () => {
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  // Prepare data for the product categories chart
+  const categoryData = React.useMemo(() => {
+    if (!products?.length) return [];
+    
+    // Count products by category
+    const categoryCounts: Record<string, number> = {};
+    products.forEach(product => {
+      const category = product.category || 'Other';
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    });
+    
+    // Map to chart data format with colors
+    const colors: Record<string, string> = {
+      vegetables: '#4ade80',
+      fruits: '#f97316',
+      grains: '#facc15',
+      dairy: '#3b82f6',
+      pulses: '#ec4899',
+      spices: '#8b5cf6',
+      Other: '#6b7280'
+    };
+    
+    return Object.entries(categoryCounts).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+      color: colors[name.toLowerCase()] || '#6b7280'
+    }));
+  }, [products]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -245,7 +282,7 @@ const FarmerDashboardPage = () => {
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cropmate-primary"></div>
                     </div>
                   ) : (
-                    <BarChart /> // Implement actual chart with product category data
+                    <BarChart data={categoryData} />
                   )}
                 </CardContent>
               </Card>

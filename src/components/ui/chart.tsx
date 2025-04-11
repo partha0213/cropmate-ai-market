@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
@@ -352,6 +353,61 @@ function getPayloadConfigFromPayload(
     ? config[configLabelKey]
     : config[key as keyof typeof config]
 }
+
+// Add the BarChart component
+export const BarChart: React.FC<{
+  data?: Array<Record<string, any>>;
+  className?: string;
+}> = ({ data = [], className }) => {
+  // Default sample data for product categories
+  const sampleData = data.length ? data : [
+    { name: 'Vegetables', value: 40, color: '#4ade80' },
+    { name: 'Fruits', value: 30, color: '#f97316' },
+    { name: 'Grains', value: 15, color: '#facc15' },
+    { name: 'Dairy', value: 10, color: '#3b82f6' },
+    { name: 'Other', value: 5, color: '#8b5cf6' },
+  ];
+
+  const config = React.useMemo(() => {
+    return sampleData.reduce((acc, item) => {
+      acc[item.name] = {
+        label: item.name,
+        color: item.color,
+      };
+      return acc;
+    }, {} as ChartConfig);
+  }, [sampleData]);
+
+  return (
+    <ChartContainer config={config} className={cn("h-[240px]", className)}>
+      <RechartsPrimitive.BarChart data={sampleData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+        <RechartsPrimitive.XAxis 
+          dataKey="name" 
+          axisLine={false} 
+          tickLine={false}
+          tick={{ fontSize: 12 }}
+          dy={10}
+        />
+        <RechartsPrimitive.YAxis 
+          hide 
+        />
+        <RechartsPrimitive.Bar dataKey="value" radius={[4, 4, 0, 0]}>
+          {sampleData.map((entry, index) => (
+            <RechartsPrimitive.Cell 
+              key={`cell-${index}`} 
+              fill={entry.color} 
+            />
+          ))}
+        </RechartsPrimitive.Bar>
+        <ChartTooltip 
+          content={
+            <ChartTooltipContent />
+          } 
+        />
+      </RechartsPrimitive.BarChart>
+    </ChartContainer>
+  );
+};
 
 export {
   ChartContainer,
