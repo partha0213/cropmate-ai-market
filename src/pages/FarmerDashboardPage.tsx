@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +21,7 @@ interface OrderWithBuyer extends Order {
     id: string;
     full_name: string;
     phone: string;
-  };
+  } | null;
   total_amount: number;
 }
 
@@ -95,7 +96,7 @@ const FarmerDashboardPage = () => {
         ...order,
         total_amount: order.total_price, // Map total_price to total_amount
         buyer: {
-          id: order.buyer_id,
+          id: order.buyer?.id || order.buyer_id,
           full_name: order.buyer?.full_name || 'Unknown',
           phone: order.buyer?.phone || 'N/A'
         }

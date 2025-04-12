@@ -73,7 +73,7 @@ const Auth = () => {
         </h2>
         
         {showRedirectInfo && (
-          <Alert className="mb-4" variant="warning">
+          <Alert className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Important Note</AlertTitle>
             <AlertDescription>
