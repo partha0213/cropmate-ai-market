@@ -40,33 +40,51 @@ const OrderHistoryPage = () => {
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
+      // First get orders without joins to avoid relation errors
+      const { data: orders, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          listing:listing_id (
-            *,
-            farmer:farmer_id (
-              full_name,
-              phone
-            )
-          )
-        `)
+        .select('*')
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false });
         
       if (error) throw new Error(error.message);
       
-      // Transform data to ensure proper types
-      return (data || []).map(order => {
-        // Get the farmer data safely, handling potential null values
-        const farmer = order.listing?.farmer || null;
+      // Now process each order to get its listing and farmer details separately
+      const processedOrders = await Promise.all((orders || []).map(async (order) => {
+        // Get the listing details
+        const { data: listingData } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('id', order.listing_id)
+          .single();
+          
+        let listing = listingData || {
+          id: order.listing_id,
+          title: 'Unknown Product',
+          price: 0,
+          quantity: 0,
+          farmer_id: '',
+          category: 'vegetables' as CropCategory,
+          quality_grade: 'A' as QualityGrade
+        };
         
-        // Ensure proper typing for nested objects
-        const listing = {
-          ...order.listing,
-          category: order.listing?.category as CropCategory,
-          quality_grade: order.listing?.quality_grade as QualityGrade,
+        // Get the farmer details if we have a farmer_id
+        let farmer = null;
+        if (listing && listing.farmer_id) {
+          const { data: farmerData } = await supabase
+            .from('profiles')
+            .select('full_name, phone')
+            .eq('id', listing.farmer_id)
+            .single();
+            
+          farmer = farmerData || null;
+        }
+        
+        // Create the final listing object with farmer info
+        const processedListing: ListingWithFarmer = {
+          ...listing,
+          category: (listing.category || 'vegetables') as CropCategory,
+          quality_grade: (listing.quality_grade || 'A') as QualityGrade,
           farmer: farmer ? {
             full_name: farmer.full_name || 'Unknown',
             phone: farmer.phone || 'N/A'
@@ -74,16 +92,19 @@ const OrderHistoryPage = () => {
             full_name: 'Unknown',
             phone: 'N/A'
           }
-        } as ListingWithFarmer;
+        };
         
+        // Return the final order object
         return {
           ...order,
-          listing,
+          listing: processedListing,
           total_amount: order.total_price,
           subtotal_amount: order.total_price * 0.95,
           delivery_fee: order.total_price * 0.05
-        };
-      }) as OrderWithListing[];
+        } as OrderWithListing;
+      }));
+      
+      return processedOrders;
     },
     enabled: !!user?.id,
   });
@@ -227,7 +248,7 @@ const OrderHistoryPage = () => {
                         <div className="flex-1">
                           <h3 className="font-medium text-lg">{order.listing.title}</h3>
                           <p className="text-gray-500 text-sm">
-                            Seller: {order.listing.farmer.full_name}
+                            Seller: {order.listing.farmer?.full_name || 'Unknown'}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-medium">

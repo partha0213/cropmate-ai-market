@@ -74,40 +74,35 @@ const FarmerDashboardPage = () => {
       
       if (!productIds?.length) return [];
       
-      // Then get orders for these products
-      const { data, error } = await supabase
+      // Then get orders for these products - modified to use separate queries
+      const { data: orders, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          buyer:buyer_id (
-            id,
-            full_name,
-            phone
-          )
-        `)
+        .select('*')
         .in('listing_id', productIds.map(p => p.id))
         .order('created_at', { ascending: false });
         
       if (error) throw new Error(error.message);
       
-      // Map orders and add total_amount property
-      return (data || []).map(order => {
-        const buyer = order.buyer || null;
-        
+      // For each order, fetch the buyer information separately
+      const ordersWithBuyers = await Promise.all((orders || []).map(async (order) => {
+        const { data: buyerData } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .eq('id', order.buyer_id)
+          .single();
+          
         return {
           ...order,
           total_amount: order.total_price,
-          buyer: buyer ? {
-            id: buyer.id || order.buyer_id,
-            full_name: buyer.full_name || 'Unknown',
-            phone: buyer.phone || 'N/A'
-          } : {
+          buyer: buyerData || {
             id: order.buyer_id,
             full_name: 'Unknown',
             phone: 'N/A'
           }
         };
-      }) as OrderWithBuyer[];
+      }));
+      
+      return ordersWithBuyers as OrderWithBuyer[];
     },
     enabled: !!user?.id,
   });
@@ -453,7 +448,7 @@ const FarmerDashboardPage = () => {
                           <tr key={order.id} className="border-b">
                             <td className="py-3 px-2 font-medium">#{order.id.substring(0, 8)}</td>
                             <td className="py-3 px-2">{format(new Date(order.created_at), 'PP')}</td>
-                            <td className="py-3 px-2">{order.buyer.full_name}</td>
+                            <td className="py-3 px-2">{order.buyer?.full_name || 'Unknown'}</td>
                             <td className="py-3 px-2">{formatCurrency(order.total_amount)}</td>
                             <td className="py-3 px-2">
                               <Badge variant="outline" className={
