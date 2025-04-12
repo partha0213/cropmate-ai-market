@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Order, Listing } from '@/types/supabase';
+import { Order, Listing, QualityGrade, CropCategory } from '@/types/supabase';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -14,14 +13,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Truck, Calendar, Clock, Package, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+// Extended Listing interface for type safety
+interface ListingWithFarmer extends Listing {
+  farmer: {
+    full_name: string;
+    phone: string;
+  };
+}
+
 // Extended Order interface with additional fields needed for the UI
 interface OrderWithListing extends Order {
-  listing: Listing & {
-    farmer: {
-      full_name: string;
-      phone: string;
-    };
-  };
+  listing: ListingWithFarmer;
   total_amount: number;
   subtotal_amount: number;
   delivery_fee: number;
@@ -32,9 +34,9 @@ const OrderHistoryPage = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
   
   // Fetch user's order history
-  const { data: orders, isLoading } = useQuery({
+  const { data: ordersData, isLoading } = useQuery({
     queryKey: ['order-history', user?.id],
-    queryFn: async (): Promise<OrderWithListing[]> => {
+    queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
@@ -54,16 +56,33 @@ const OrderHistoryPage = () => {
         
       if (error) throw new Error(error.message);
       
-      // Add calculated fields to each order for the UI
-      return (data || []).map(order => ({
-        ...order,
-        total_amount: order.total_price,  // Map from DB field to UI field
-        subtotal_amount: order.total_price * 0.95, // Example calculation, adjust as needed
-        delivery_fee: order.total_price * 0.05 // Example calculation, adjust as needed
-      })) as OrderWithListing[];
+      // Transform data to ensure proper types
+      return (data || []).map(order => {
+        // Ensure proper typing for nested objects
+        const listing = {
+          ...order.listing,
+          category: order.listing?.category as CropCategory,
+          quality_grade: order.listing?.quality_grade as QualityGrade,
+          farmer: {
+            full_name: order.listing?.farmer?.full_name || 'Unknown',
+            phone: order.listing?.farmer?.phone || 'N/A'
+          }
+        } as ListingWithFarmer;
+        
+        return {
+          ...order,
+          listing,
+          total_amount: order.total_price,
+          subtotal_amount: order.total_price * 0.95,
+          delivery_fee: order.total_price * 0.05
+        };
+      }) as OrderWithListing[];
     },
     enabled: !!user?.id,
   });
+  
+  // Safely access orders
+  const orders = ordersData || [];
   
   // Filter orders based on active tab
   const filteredOrders = React.useMemo(() => {

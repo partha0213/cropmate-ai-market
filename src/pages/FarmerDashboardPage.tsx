@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { CropCategory, Listing, Order, Profile } from '@/types/supabase';
+import { CropCategory, Listing, Order, Profile, QualityGrade } from '@/types/supabase';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -22,7 +21,13 @@ interface OrderWithBuyer extends Order {
     full_name: string;
     phone: string;
   };
-  total_amount: number; // Add this to fix the TypeScript error
+  total_amount: number;
+}
+
+// Define interface for farmer's listings
+interface FarmerListing extends Listing {
+  category: CropCategory;
+  quality_grade: QualityGrade | null;
 }
 
 const FarmerDashboardPage = () => {
@@ -32,7 +37,7 @@ const FarmerDashboardPage = () => {
   // Fetch farmer's products
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['farmer-products', user?.id],
-    queryFn: async (): Promise<Listing[]> => {
+    queryFn: async (): Promise<FarmerListing[]> => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
@@ -46,16 +51,17 @@ const FarmerDashboardPage = () => {
       // Convert string category to CropCategory type
       return (data || []).map(item => ({
         ...item,
-        category: item.category as CropCategory
+        category: item.category as CropCategory,
+        quality_grade: item.quality_grade as QualityGrade | null,
       }));
     },
     enabled: !!user?.id,
   });
   
   // Fetch orders for farmer's products
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['farmer-orders', user?.id],
-    queryFn: async (): Promise<OrderWithBuyer[]> => {
+    queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
       // First get the product IDs for this farmer
@@ -87,12 +93,20 @@ const FarmerDashboardPage = () => {
       // Map orders and add total_amount property
       return (data || []).map(order => ({
         ...order,
-        total_amount: order.total_price // Map total_price to total_amount
+        total_amount: order.total_price, // Map total_price to total_amount
+        buyer: {
+          id: order.buyer_id,
+          full_name: order.buyer?.full_name || 'Unknown',
+          phone: order.buyer?.phone || 'N/A'
+        }
       })) as OrderWithBuyer[];
     },
     enabled: !!user?.id,
   });
   
+  // Safely access orders
+  const orders = ordersData || [];
+
   // Calculate earnings
   const totalEarnings = orders?.reduce((total, order) => 
     total + (order.total_amount || 0), 0) || 0;
