@@ -1,9 +1,12 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/supabase';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -14,6 +17,7 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<UserRole>('buyer');
+  const [showRedirectInfo, setShowRedirectInfo] = useState(false);
   
   // Redirect if already logged in
   if (session) {
@@ -42,6 +46,7 @@ const Auth = () => {
         if (error) throw error;
         
         toast.success('Registration successful! Please check your email for verification.');
+        setShowRedirectInfo(true);
       } else {
         // Sign in flow
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -66,6 +71,17 @@ const Auth = () => {
         <h2 className="text-2xl font-semibold mb-4 text-center">
           {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
+        
+        {showRedirectInfo && (
+          <Alert className="mb-4" variant="warning">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Important Note</AlertTitle>
+            <AlertDescription>
+              If the verification link in your email redirects to localhost:3000, please replace it with the current application URL. This happens because the Supabase redirect URLs need to be configured.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <form onSubmit={handleAuth}>
           {isSignUp && (
             <>
