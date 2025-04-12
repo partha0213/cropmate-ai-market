@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,7 +16,7 @@ import { Package, ShoppingBag, TrendingUp, Users, MoreVertical, Plus, Trash2, Ed
 
 // Define proper interfaces for the order with related data
 interface OrderWithBuyer extends Order {
-  buyer: {
+  buyer?: {
     id: string;
     full_name: string;
     phone: string;
@@ -92,15 +91,23 @@ const FarmerDashboardPage = () => {
       if (error) throw new Error(error.message);
       
       // Map orders and add total_amount property
-      return (data || []).map(order => ({
-        ...order,
-        total_amount: order.total_price, // Map total_price to total_amount
-        buyer: {
-          id: order.buyer?.id || order.buyer_id,
-          full_name: order.buyer?.full_name || 'Unknown',
-          phone: order.buyer?.phone || 'N/A'
-        }
-      })) as OrderWithBuyer[];
+      return (data || []).map(order => {
+        const buyer = order.buyer || null;
+        
+        return {
+          ...order,
+          total_amount: order.total_price,
+          buyer: buyer ? {
+            id: buyer.id || order.buyer_id,
+            full_name: buyer.full_name || 'Unknown',
+            phone: buyer.phone || 'N/A'
+          } : {
+            id: order.buyer_id,
+            full_name: 'Unknown',
+            phone: 'N/A'
+          }
+        };
+      }) as OrderWithBuyer[];
     },
     enabled: !!user?.id,
   });

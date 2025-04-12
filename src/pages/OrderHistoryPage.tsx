@@ -16,7 +16,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 // Extended Listing interface for type safety
 interface ListingWithFarmer extends Listing {
-  farmer: {
+  farmer?: {
     full_name: string;
     phone: string;
   } | null;
@@ -59,14 +59,20 @@ const OrderHistoryPage = () => {
       
       // Transform data to ensure proper types
       return (data || []).map(order => {
+        // Get the farmer data safely, handling potential null values
+        const farmer = order.listing?.farmer || null;
+        
         // Ensure proper typing for nested objects
         const listing = {
           ...order.listing,
           category: order.listing?.category as CropCategory,
           quality_grade: order.listing?.quality_grade as QualityGrade,
-          farmer: {
-            full_name: order.listing?.farmer?.full_name || 'Unknown',
-            phone: order.listing?.farmer?.phone || 'N/A'
+          farmer: farmer ? {
+            full_name: farmer.full_name || 'Unknown',
+            phone: farmer.phone || 'N/A'
+          } : {
+            full_name: 'Unknown',
+            phone: 'N/A'
           }
         } as ListingWithFarmer;
         
