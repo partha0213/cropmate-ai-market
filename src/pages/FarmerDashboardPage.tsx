@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FarmerOrder } from '@/types/order';
-import { OrderStatus } from '@/types/supabase';
+import { OrderStatus, PaymentStatus } from '@/types/supabase';
 
 const FarmerDashboardPage = () => {
   const { user } = useAuth();
@@ -63,7 +63,7 @@ const FarmerDashboardPage = () => {
       if (ordersError) throw ordersError;
       
       // Now enrich the orders with listing details and buyer info
-      const enrichedOrders: FarmerOrder[] = await Promise.all(
+      const enrichedOrders = await Promise.all(
         (orderData || []).map(async (order) => {
           // Find the listing details
           const listing = listings.find(l => l.id === order.listing_id);
@@ -84,7 +84,7 @@ const FarmerDashboardPage = () => {
             quantity: order.quantity,
             total_price: order.total_price,
             order_status: order.order_status as OrderStatus,
-            payment_status: order.payment_status || 'pending',
+            payment_status: (order.payment_status || 'pending') as PaymentStatus,
             created_at: order.created_at || new Date().toISOString(),
             buyer: {
               id: buyer?.id || order.buyer_id,

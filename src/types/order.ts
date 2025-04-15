@@ -1,4 +1,5 @@
 
+
 import { CartItem, Listing, Order, Profile, OrderStatus, PaymentMethod, PaymentStatus } from './supabase';
 
 export interface OrderWithDetails extends Order {
@@ -38,7 +39,7 @@ export interface FarmerOrder {
   quantity: number;
   total_price: number;
   order_status: OrderStatus;
-  payment_status: string;
+  payment_status: PaymentStatus | null;
   created_at: string;
   buyer: {
     id: string;
@@ -48,3 +49,4 @@ export interface FarmerOrder {
   delivery_address: string;
   delivery_notes: string | null;
 }
+

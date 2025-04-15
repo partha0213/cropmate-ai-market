@@ -15,6 +15,7 @@ import { ArrowRight, Check, CreditCard, MapPin, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import PaymentOptions from '@/components/PaymentOptions';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -24,6 +25,8 @@ const CheckoutPage = () => {
   const [shippingAddress, setShippingAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [step, setStep] = useState<'information' | 'payment'>('information');
 
   // Calculate shipping fee and taxes
   const shippingFee = cartTotal > 500 ? 0 : 50; // Free shipping for orders over ₹500
@@ -76,8 +79,17 @@ const CheckoutPage = () => {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleContinueToPayment = () => {
+    if (!shippingAddress) {
+      toast.error('Please enter your shipping address');
+      return;
+    }
+    setStep('payment');
+  };
+
+  const handlePaymentComplete = (method: string, details: any) => {
+    setPaymentMethod(method);
+    setPaymentDetails(details);
     placeOrder.mutate();
   };
 
@@ -104,14 +116,21 @@ const CheckoutPage = () => {
       <div className="container mx-auto px-4 py-8 flex-1">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Checkout</h1>
-          <Button variant="ghost" onClick={() => navigate('/cart')}>
-            Back to Cart
-          </Button>
+          {step === 'payment' && (
+            <Button variant="ghost" onClick={() => setStep('information')}>
+              Back to Shipping
+            </Button>
+          )}
+          {step === 'information' && (
+            <Button variant="ghost" onClick={() => navigate('/cart')}>
+              Back to Cart
+            </Button>
+          )}
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit}>
+            {step === 'information' && (
               <Card className="mb-6">
                 <CardContent className="p-6">
                   <div className="flex items-center mb-4">
@@ -143,66 +162,27 @@ const CheckoutPage = () => {
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="mb-6">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    <CreditCard className="mr-2 text-cropmate-primary" />
-                    <h2 className="text-lg font-semibold">Payment Method</h2>
-                  </div>
                   
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="cod"
-                        name="paymentMethod"
-                        value="cash_on_delivery"
-                        checked={paymentMethod === 'cash_on_delivery'}
-                        onChange={() => setPaymentMethod('cash_on_delivery')}
-                        className="h-4 w-4 text-cropmate-primary"
-                      />
-                      <Label htmlFor="cod">Cash on Delivery</Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 opacity-50">
-                      <input
-                        type="radio"
-                        id="upi"
-                        name="paymentMethod"
-                        value="upi"
-                        disabled
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="upi">UPI (Coming Soon)</Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 opacity-50">
-                      <input
-                        type="radio"
-                        id="card"
-                        name="paymentMethod"
-                        value="card"
-                        disabled
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="card">Credit/Debit Card (Coming Soon)</Label>
-                    </div>
+                  <div className="mt-6">
+                    <Button 
+                      onClick={handleContinueToPayment}
+                      className="w-full"
+                    >
+                      Continue to Payment
+                      <ArrowRight className="ml-2" size={16} />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-              
-              <Button 
-                type="submit" 
-                className="w-full md:w-auto bg-cropmate-primary hover:bg-cropmate-primary/90"
-                disabled={loading || placeOrder.isPending}
-              >
-                {loading || placeOrder.isPending ? 'Processing...' : 'Place Order'}
-                <ArrowRight className="ml-2" size={16} />
-              </Button>
-            </form>
+            )}
+            
+            {step === 'payment' && (
+              <PaymentOptions 
+                amount={orderTotal}
+                onPaymentComplete={handlePaymentComplete}
+                isProcessing={loading || placeOrder.isPending}
+              />
+            )}
           </div>
           
           <div>
