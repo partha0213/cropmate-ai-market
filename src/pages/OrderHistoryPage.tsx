@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,9 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, Phone, ExternalLink, Calendar, InfoIcon } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Package, Phone, Calendar, InfoIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -56,7 +54,7 @@ const OrderHistoryPage = () => {
           if (listingError) {
             console.error('Error fetching listing:', listingError);
             
-            // Return a default listing if there's an error
+            // Create default listing with required properties
             const defaultListing: ListingWithFarmer = {
               id: order.listing_id,
               title: 'Unknown Product',
@@ -65,33 +63,32 @@ const OrderHistoryPage = () => {
               farmer_id: '',
               category: 'vegetables' as CropCategory,
               quality_grade: 'A' as QualityGrade,
-              description: '', // Add missing required properties
-              status: 'unknown' // Add missing required properties
+              description: '',
+              status: 'unknown',
+              farmer: {
+                full_name: 'Unknown Farmer',
+                phone: 'N/A'
+              }
             };
             
-            // Get the farmer details if we have a farmer_id
-            const { data: farmer } = await supabase
-              .from('profiles')
-              .select('full_name, phone')
-              .eq('id', defaultListing.farmer_id)
-              .single();
-            
-            defaultListing.farmer = {
-              full_name: farmer?.full_name || 'Unknown Farmer',
-              phone: farmer?.phone || 'N/A'
+            return { 
+              ...order, 
+              listing: defaultListing,
+              order_status: (order.order_status || 'placed') as OrderStatus 
             };
-            
-            return { ...order, listing: defaultListing };
           }
           
-          // Process the listing to ensure it has the correct types
+          // Create a properly typed listing object with farmer property
           const processedListing: ListingWithFarmer = {
             ...listing,
             category: (listing.category || 'vegetables') as CropCategory,
             quality_grade: (listing.quality_grade || 'A') as QualityGrade,
-            description: listing.description || '', // Ensure description is included
-            status: listing.status || 'unknown', // Ensure status is included
-            farmer: { full_name: '', phone: '' } // Initialize farmer property
+            description: listing.description || '',
+            status: listing.status || 'unknown',
+            farmer: {
+              full_name: null,
+              phone: null
+            }
           };
           
           // Get the farmer details
@@ -108,7 +105,11 @@ const OrderHistoryPage = () => {
             };
           }
           
-          return { ...order, listing: processedListing };
+          return { 
+            ...order, 
+            listing: processedListing,
+            order_status: (order.order_status || 'placed') as OrderStatus 
+          };
         })
       );
       
@@ -263,7 +264,7 @@ const OrderCard = ({ order, getStatusBadge, formatDate }: OrderCardProps) => {
               <h3 className="text-lg font-semibold mr-3">
                 Order #{order.id.substring(0, 8)}
               </h3>
-              {getStatusBadge(order.order_status as OrderStatus)}
+              {getStatusBadge(order.order_status)}
             </div>
             <p className="text-sm text-gray-500 mt-1">
               Placed on {formatDate(order.created_at)}

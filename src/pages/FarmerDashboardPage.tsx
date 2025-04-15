@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,27 +15,7 @@ import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { OrderStatus } from '@/types/supabase';
-
-// Order type for the farmer dashboard
-interface FarmerOrder {
-  id: string;
-  listing_id: string;
-  listing_title: string;
-  listing_price: number;
-  listing_unit: string;
-  quantity: number;
-  total_price: number;
-  order_status: OrderStatus;
-  payment_status: string;
-  created_at: string;
-  buyer: {
-    id: string;
-    full_name: string | null;
-    phone: string | null;
-  };
-  delivery_address: string;
-  delivery_notes: string | null;
-}
+import { FarmerOrder } from '@/types/order';
 
 const FarmerDashboardPage = () => {
   const { user } = useAuth();
@@ -75,7 +54,8 @@ const FarmerDashboardPage = () => {
           payment_status,
           created_at,
           delivery_address,
-          delivery_notes
+          delivery_notes,
+          buyer_id
         `)
         .in('listing_id', listingIds)
         .order('created_at', { ascending: false });
@@ -110,7 +90,8 @@ const FarmerDashboardPage = () => {
               },
               listing_title: listings.find(l => l.id === order.listing_id)?.title || 'Unknown Product',
               listing_price: listings.find(l => l.id === order.listing_id)?.price || 0,
-              listing_unit: listings.find(l => l.id === order.listing_id)?.unit || 'unit'
+              listing_unit: listings.find(l => l.id === order.listing_id)?.unit || 'unit',
+              order_status: (order.order_status || 'placed') as OrderStatus
             };
           }
           
@@ -122,7 +103,8 @@ const FarmerDashboardPage = () => {
             buyer,
             listing_title: listing?.title || 'Unknown Product',
             listing_price: listing?.price || 0,
-            listing_unit: listing?.unit || 'unit'
+            listing_unit: listing?.unit || 'unit',
+            order_status: (order.order_status || 'placed') as OrderStatus
           };
         })
       );
