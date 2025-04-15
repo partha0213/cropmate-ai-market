@@ -1,71 +1,67 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, ShoppingBag, Truck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ShoppingBag, Truck } from 'lucide-react';
 
 const OrderSuccessPage = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
+      
       <div className="container mx-auto px-4 py-12 flex-1 flex flex-col items-center justify-center">
-        <Card className="w-full max-w-lg text-center">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Order Placed Successfully!</CardTitle>
-          </CardHeader>
+        <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md text-center">
+          <div className="mb-6 flex justify-center">
+            <CheckCircle2 className="h-16 w-16 text-green-600" />
+          </div>
           
-          <CardContent className="space-y-4">
-            <p className="text-gray-600">
-              Thank you for your purchase. Your order has been received and is being processed.
-            </p>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-center items-center space-x-2 mb-2">
-                <Truck className="h-5 w-5 text-gray-500" />
-                <p className="font-medium">Delivery Information</p>
+          <h1 className="text-2xl font-bold mb-2">Order Placed Successfully!</h1>
+          
+          <p className="text-gray-600 mb-6">
+            Thank you for your order. Your fresh produce is on its way to you!
+          </p>
+          
+          <div className="space-y-4 mb-6">
+            <div className="bg-gray-50 p-4 rounded-md flex items-center">
+              <Truck className="h-5 w-5 text-cropmate-primary mr-3" />
+              <div className="text-left">
+                <p className="text-sm font-medium">Delivery Expected</p>
+                <p className="text-sm text-gray-500">Within 1-3 business days</p>
               </div>
-              <p className="text-sm text-gray-600">
-                You will receive an email confirmation shortly with your order details.
-                You can also track your order status in your account.
-              </p>
             </div>
             
-            <div className="flex justify-center items-center gap-2 py-2">
-              <div className="h-3 w-3 rounded-full bg-green-500"></div>
-              <p className="text-sm text-gray-600">Order Placed</p>
-              <div className="h-0.5 w-16 bg-gray-300"></div>
-              <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-              <p className="text-sm text-gray-600">Processing</p>
-              <div className="h-0.5 w-16 bg-gray-300"></div>
-              <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-              <p className="text-sm text-gray-600">Shipped</p>
-              <div className="h-0.5 w-16 bg-gray-300"></div>
-              <div className="h-3 w-3 rounded-full bg-gray-300"></div>
-              <p className="text-sm text-gray-600">Delivered</p>
+            <div className="bg-gray-50 p-4 rounded-md flex items-center">
+              <ShoppingBag className="h-5 w-5 text-cropmate-primary mr-3" />
+              <div className="text-left">
+                <p className="text-sm font-medium">Order Updates</p>
+                <p className="text-sm text-gray-500">Track your order in Order History</p>
+              </div>
             </div>
-          </CardContent>
+          </div>
           
-          <CardFooter className="flex flex-col space-y-3">
-            <Button asChild className="w-full">
-              <Link to="/order-history">
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                View Order History
-              </Link>
+          <div className="flex flex-col space-y-3">
+            <Button 
+              className="w-full"
+              onClick={() => navigate('/order-history')}
+            >
+              View Order History
             </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/marketplace">
-                Continue Shopping
-              </Link>
+            
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/marketplace')}
+            >
+              Continue Shopping
             </Button>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </div>
+      
       <Footer />
     </div>
   );

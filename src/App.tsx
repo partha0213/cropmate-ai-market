@@ -15,6 +15,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import FarmerDashboardPage from "./pages/FarmerDashboardPage";
+import CartPage from "./pages/CartPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={
               <ProtectedRoute>
                 <CheckoutPage />
