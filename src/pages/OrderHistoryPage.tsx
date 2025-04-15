@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,7 +64,9 @@ const OrderHistoryPage = () => {
           quantity: 0,
           farmer_id: '',
           category: 'vegetables' as CropCategory,
-          quality_grade: 'A' as QualityGrade
+          quality_grade: 'A' as QualityGrade,
+          description: '', // Add missing required properties
+          status: 'unknown' // Add missing required properties
         };
         
         // Get the farmer details if we have a farmer_id
@@ -85,6 +86,8 @@ const OrderHistoryPage = () => {
           ...listing,
           category: (listing.category || 'vegetables') as CropCategory,
           quality_grade: (listing.quality_grade || 'A') as QualityGrade,
+          description: listing.description || '', // Ensure description is included
+          status: listing.status || 'unknown', // Ensure status is included
           farmer: farmer ? {
             full_name: farmer.full_name || 'Unknown',
             phone: farmer.phone || 'N/A'
