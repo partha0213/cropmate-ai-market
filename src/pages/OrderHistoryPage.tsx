@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,7 @@ import { format } from 'date-fns';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { OrderWithDetails, ListingWithFarmer } from '@/types/order';
-import { OrderStatus, CropCategory, QualityGrade } from '@/types/supabase';
+import { OrderStatus, CropCategory, QualityGrade, PaymentMethod, PaymentStatus } from '@/types/supabase';
 
 const OrderHistoryPage = () => {
   const { user } = useAuth();
@@ -74,7 +75,9 @@ const OrderHistoryPage = () => {
             return { 
               ...order, 
               listing: defaultListing,
-              order_status: (order.order_status || 'placed') as OrderStatus 
+              order_status: (order.order_status || 'placed') as OrderStatus,
+              payment_method: (order.payment_method as PaymentMethod) || null,
+              payment_status: (order.payment_status as PaymentStatus) || null
             };
           }
           
@@ -108,7 +111,9 @@ const OrderHistoryPage = () => {
           return { 
             ...order, 
             listing: processedListing,
-            order_status: (order.order_status || 'placed') as OrderStatus 
+            order_status: (order.order_status || 'placed') as OrderStatus,
+            payment_method: (order.payment_method as PaymentMethod) || null,
+            payment_status: (order.payment_status as PaymentStatus) || null
           };
         })
       );

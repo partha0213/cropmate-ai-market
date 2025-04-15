@@ -6,8 +6,8 @@ export interface OrderWithDetails extends Order {
   buyer?: Profile;
   farmer?: Profile;
   order_status: OrderStatus;
-  payment_method?: PaymentMethod;
-  payment_status?: PaymentStatus;
+  payment_method?: PaymentMethod | null;
+  payment_status?: PaymentStatus | null;
 }
 
 export interface ListingWithFarmer extends Listing {
